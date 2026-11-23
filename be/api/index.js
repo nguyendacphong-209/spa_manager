@@ -61,7 +61,32 @@ async function initialize() {
 const app = createApp()
 
 export default async function handler(request, response) {
-  initialized ||= initialize()
-  await initialized
-  return app(request, response)
+  try {
+    initialized ||= initialize()
+    await initialized
+    return app(request, response)
+  } catch (error) {
+    console.error('Serverless initialization failed:', error)
+
+    let code = 'SERVERLESS_INITIALIZATION_FAILED'
+    let message = 'Dịch vụ chưa sẵn sàng.'
+    if (/MONGODB_URI is required/i.test(error?.message || '') || /MONGODB_URI/.test(error?.message || '')) {
+      code = 'MONGODB_CONFIGURATION_ERROR'
+      message = 'Thiếu hoặc sai cấu hình MONGODB_URI trên Vercel.'
+    } else if (/authentication failed/i.test(error?.message || '') || error?.code === 8000) {
+      code = 'MONGODB_AUTH_ERROR'
+      message = 'MongoDB Atlas từ chối username hoặc password.'
+    } else if (/ENODATA|querySrv/i.test(error?.message || '') || error?.code === 'ENODATA') {
+      code = 'MONGODB_DNS_ERROR'
+      message = 'Không tra cứu được cluster MongoDB Atlas.'
+    }
+
+    return response.status(503).json({
+      success: false,
+      data: null,
+      message,
+      code,
+      meta: {},
+    })
+  }
 }

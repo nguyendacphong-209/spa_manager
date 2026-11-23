@@ -816,7 +816,16 @@ export function createApp() {
       return response.status(409).json({ success: false, data: null, message: 'Dữ liệu trùng lặp.', code: 'CONFLICT', meta: {} })
     }
     console.error(error)
-    response.status(500).json({ success: false, data: null, message: 'Lỗi máy chủ.', code: 'INTERNAL_ERROR', meta: {} })
+    response.status(500).json({
+      success: false,
+      data: null,
+      message: 'Lỗi máy chủ.',
+      code: 'INTERNAL_ERROR',
+      meta: {
+        errorName: error?.name || null,
+        errorCode: typeof error?.code === 'string' ? error.code : null,
+      },
+    })
   })
 
   return app
