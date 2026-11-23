@@ -1,7 +1,12 @@
 import axios from 'axios'
 
+const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+const productionApiUrl = 'https://lemn-spa-api.vercel.app/api/v1'
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL ||
+    (isLocalHost ? 'http://localhost:5001/api/v1' : productionApiUrl),
 })
 
 api.interceptors.request.use((config) => {
