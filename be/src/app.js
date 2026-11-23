@@ -220,6 +220,54 @@ export function createApp() {
     } catch (error) { next(error) }
   })
 
+  api.patch('/staff/:id', requireOwner, validate(z.object({
+    fullName: z.string().min(1).optional(),
+    email: z.string().email().optional(),
+    password: z.string().min(6).optional(),
+    phone: z.string().optional(),
+    isActive: z.boolean().optional(),
+    isServiceProvider: z.boolean().optional(),
+  })), async (request, response, next) => {
+    try {
+      const staff = await StaffProfile.findById(request.params.id).populate('userId')
+      if (!staff) {
+        return response.status(404).json({ success: false, data: null, message: 'Không tìm thấy nhân viên.', code: 'NOT_FOUND', meta: {} })
+      }
+
+      if (request.validatedBody.email) {
+        const existing = await User.findOne({
+          email: request.validatedBody.email,
+          _id: { $ne: staff.userId._id },
+        })
+        if (existing) {
+          return response.status(409).json({ success: false, data: null, message: 'Email nhân viên đã được sử dụng.', code: 'CONFLICT', meta: {} })
+        }
+        staff.userId.email = request.validatedBody.email
+      }
+      if (request.validatedBody.fullName) {
+        staff.displayName = request.validatedBody.fullName
+        staff.userId.fullName = request.validatedBody.fullName
+      }
+      if (request.validatedBody.password) {
+        staff.userId.passwordHash = await bcrypt.hash(request.validatedBody.password, 12)
+      }
+      if (typeof request.validatedBody.isActive === 'boolean') {
+        staff.userId.isActive = request.validatedBody.isActive
+        staff.isActive = request.validatedBody.isActive
+      }
+      if (typeof request.validatedBody.isServiceProvider === 'boolean') {
+        staff.isServiceProvider = request.validatedBody.isServiceProvider
+      }
+      if (typeof request.validatedBody.phone === 'string') {
+        staff.phone = request.validatedBody.phone
+      }
+
+      await staff.userId.save()
+      await staff.save()
+      response.json(success(await StaffProfile.findById(staff._id).populate('userId', 'fullName email role isActive')))
+    } catch (error) { next(error) }
+  })
+
   api.route('/customers').get(async (request, response, next) => {
     try {
       const page = Math.max(1, Number(request.query.page) || 1)

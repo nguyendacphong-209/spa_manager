@@ -54,6 +54,8 @@ function Login() {
 function Shell() {
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   if (!user) return <Navigate to="/login" replace />
   const visibleNavItems = navItems.filter(([, label]) => {
     if (user.role === 'OWNER') return true
@@ -62,11 +64,44 @@ function Shell() {
 
   return (
     <div className="layout">
-      <aside className="sidebar">
+      <header className="mobile-topbar">
+        <button
+          type="button"
+          className={`menu-trigger ${mobileMenuOpen ? 'is-open' : ''}`}
+          aria-label={mobileMenuOpen ? 'Đóng menu' : 'Mở menu'}
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen((open) => !open)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        <div className="mobile-brand">
+          <strong>LEMN</strong>
+          <span>SKIN &amp; SPA</span>
+        </div>
+        <button
+          type="button"
+          className="mobile-avatar"
+          aria-label="Mở menu tài khoản"
+          onClick={() => setUserMenuOpen((open) => !open)}
+        >
+          {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
+        </button>
+      </header>
+      {userMenuOpen && (
+        <div className="mobile-user-menu">
+          <strong>{user.fullName}</strong>
+          <span>{user.role === 'OWNER' ? 'Quản trị viên' : 'Nhân viên'}</span>
+          <button type="button" onClick={() => { logout(); window.location.href = '/login' }}>Đăng xuất</button>
+        </div>
+      )}
+      {mobileMenuOpen && <button className="drawer-backdrop" aria-label="Đóng menu" onClick={() => setMobileMenuOpen(false)} />}
+      <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="brand brand-mark">LEMN</div>
         <div className="brand-subtitle">SKIN &amp; SPA</div>
         <nav>{visibleNavItems.map(([path, label]) => (
-          <NavLink key={path} to={path} end={path === '/'}>{label}</NavLink>
+          <NavLink key={path} to={path} end={path === '/'} onClick={() => setMobileMenuOpen(false)}>{label}</NavLink>
         ))}</nav>
         <button className="logout" onClick={() => { logout(); window.location.href = '/login' }}>Đăng xuất</button>
       </aside>
@@ -645,7 +680,16 @@ function Services() {
 function Staff() {
   const user = useAuthStore((state) => state.user)
   const [showForm, setShowForm] = useState(false)
+  const [editingStaff, setEditingStaff] = useState(null)
   const [form, setForm] = useState({ fullName: '', email: '', password: '', phone: '' })
+  const [editForm, setEditForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    phone: '',
+    isActive: true,
+    isServiceProvider: true,
+  })
   const [message, setMessage] = useState('')
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['staff'],
@@ -662,6 +706,48 @@ function Staff() {
       refetch()
     } catch (staffError) {
       setMessage(staffError.response?.data?.message || 'Không thể tạo nhân viên.')
+    }
+  }
+
+  function openEditStaff(staff) {
+    setEditingStaff(staff)
+    setEditForm({
+      fullName: staff.displayName || '',
+      email: staff.userId?.email || '',
+      password: '',
+      phone: staff.phone || '',
+      isActive: staff.isActive !== false,
+      isServiceProvider: staff.isServiceProvider !== false,
+    })
+  }
+
+  async function updateStaff(event) {
+    event.preventDefault()
+    try {
+      const payload = {
+        fullName: editForm.fullName,
+        email: editForm.email,
+        phone: editForm.phone,
+        isActive: editForm.isActive,
+        isServiceProvider: editForm.isServiceProvider,
+      }
+      if (editForm.password) payload.password = editForm.password
+      await api.patch(`/staff/${editingStaff._id}`, payload)
+      setEditingStaff(null)
+      setMessage('Đã cập nhật tài khoản nhân viên.')
+      refetch()
+    } catch (staffError) {
+      setMessage(staffError.response?.data?.message || 'Không thể cập nhật nhân viên.')
+    }
+  }
+
+  async function toggleStaffStatus(staff) {
+    try {
+      await api.patch(`/staff/${staff._id}`, { isActive: !staff.isActive })
+      setMessage(staff.isActive ? 'Đã ngừng tài khoản nhân viên.' : 'Đã khôi phục tài khoản nhân viên.')
+      refetch()
+    } catch (staffError) {
+      setMessage(staffError.response?.data?.message || 'Không thể thay đổi trạng thái nhân viên.')
     }
   }
 
@@ -682,6 +768,36 @@ function Staff() {
           </div>
         </form>
       )}
+      {editingStaff && (
+        <div className="edit-modal-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setEditingStaff(null)
+        }}>
+          <form className="management-form panel edit-modal" onSubmit={updateStaff}>
+            <div className="appointment-form-heading">
+              <div>
+                <p className="eyebrow">Tài khoản nhân viên</p>
+                <h2>Chỉnh sửa nhân viên</h2>
+              </div>
+            </div>
+            <label>Họ và tên<input required value={editForm.fullName} onChange={(event) => setEditForm({ ...editForm, fullName: event.target.value })} /></label>
+            <label>Email đăng nhập<input required type="email" value={editForm.email} onChange={(event) => setEditForm({ ...editForm, email: event.target.value })} /></label>
+            <label>Mật khẩu mới<input type="password" minLength={6} placeholder="Để trống nếu không đổi" value={editForm.password} onChange={(event) => setEditForm({ ...editForm, password: event.target.value })} /></label>
+            <label>Số điện thoại<input value={editForm.phone} onChange={(event) => setEditForm({ ...editForm, phone: event.target.value })} /></label>
+            <label className="check-label">
+              <input type="checkbox" checked={editForm.isActive} onChange={(event) => setEditForm({ ...editForm, isActive: event.target.checked })} />
+              Tài khoản đang hoạt động
+            </label>
+            <label className="check-label">
+              <input type="checkbox" checked={editForm.isServiceProvider} onChange={(event) => setEditForm({ ...editForm, isServiceProvider: event.target.checked })} />
+              Có thể nhận lịch phục vụ
+            </label>
+            <div className="form-actions">
+              <button type="button" className="secondary" onClick={() => setEditingStaff(null)}>Hủy</button>
+              <button type="submit">Lưu thay đổi</button>
+            </div>
+          </form>
+        </div>
+      )}
       {isLoading ? <div className="loading">Đang tải...</div> : error ? <ErrorState retry={refetch} /> : (
         <section className="staff-grid">
           {data?.length ? data.map((staff) => (
@@ -693,6 +809,18 @@ function Staff() {
                 <small>{staff.phone || 'Chưa có số điện thoại'}</small>
               </div>
               <span className={`badge ${staff.isActive ? 'confirmed' : 'cancelled'}`}>{staff.isActive ? 'Đang làm việc' : 'Ngưng hoạt động'}</span>
+              {user?.role === 'OWNER' && (
+                <div className="staff-actions">
+                  <button type="button" className="secondary" onClick={() => openEditStaff(staff)}>Chỉnh sửa</button>
+                  <button
+                    type="button"
+                    className={staff.isActive ? 'danger-button' : 'progress-event'}
+                    onClick={() => toggleStaffStatus(staff)}
+                  >
+                    {staff.isActive ? 'Ngưng' : 'Khôi phục'}
+                  </button>
+                </div>
+              )}
             </article>
           )) : <EmptyState text="Chưa có nhân viên." />}
         </section>
