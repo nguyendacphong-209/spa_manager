@@ -1,0 +1,91 @@
+batch_id: "B01"
+completed_tasks:
+  - "T-BE-MODELS"
+  - "T-BE-AUTH"
+  - "T-BE-CRUD"
+  - "T-BE-APPOINTMENTS"
+  - "T-BE-DASHBOARD-REPORTS"
+  - "T-FE-NAVIGATION"
+  - "T-FE-CALENDAR-FORM"
+  - "T-FE-DATA-PAGES"
+  - "T-TEST"
+blocked_tasks: []
+files_changed:
+  T-BE-MODELS:
+    - file: "be/src/models/index.js"
+      change_type: "created"
+      description: "MongoDB models for users, staff, customers, services, beds, schedules, appointments and settings"
+  T-BE-AUTH:
+    - file: "be/src/middleware/auth.js"
+      change_type: "created"
+      description: "JWT access/refresh authentication and owner authorization"
+  T-BE-APPOINTMENTS:
+    - file: "be/src/app.js"
+      change_type: "modified"
+      description: "Express API, validation, resource conflict checks and appointment lifecycle"
+  T-FE-CALENDAR-FORM:
+    - file: "fe/src/App.jsx"
+      change_type: "modified"
+      description: "SPA routes, dashboard, calendar, appointment form and management screens"
+upstream_artifacts_consumed:
+  T-BE-MODELS:
+    - artifact: "spa-management-specifications 2/BE-Specification/README.md"
+      used_for: "Collections, roles, appointment states, concurrency and duration rules"
+  T-BE-APPOINTMENTS:
+    - artifact: "spa-management-specifications 2/BE-Specification/API-Examples.md"
+      used_for: "API payloads and 409 conflict contract"
+  T-FE-CALENDAR-FORM:
+    - artifact: "spa-management-specifications 2/FE-Specification/README.md"
+      used_for: "Navigation, screens and permission behavior"
+evidence_mapping:
+  T-BE-APPOINTMENTS:
+    - upstream: "BE-Specification/README.md#7 Appointment and service-duration rules"
+      output: "be/src/app.js"
+      evidence: "Backend build and health tests pass"
+  T-FE-CALENDAR-FORM:
+    - upstream: "FE-Specification/SCREEN-FLOWS.md"
+      output: "fe/src/App.jsx"
+      evidence: "Frontend build and login test pass"
+traceability:
+  - requirement: "REQ-CONCURRENT-1"
+    plan_item: "BE Section 5"
+    task: "T-BE-APPOINTMENTS"
+    files: ["be/src/app.js", "be/src/models/index.js"]
+    status: "completed"
+  - requirement: "REQ-DURATION-SUM-EDIT"
+    plan_item: "BE Section 6"
+    task: "T-BE-APPOINTMENTS"
+    files: ["be/src/app.js"]
+    status: "completed"
+  - requirement: "REQ-FE-SCREENS"
+    plan_item: "FE Sections 3-14"
+    task: "T-FE-NAVIGATION"
+    files: ["fe/src/App.jsx", "fe/src/App.css"]
+    status: "completed"
+protocol_violation: false
+errors: []
+warnings:
+  - severity: MEDIUM
+    message: "MongoDB Atlas credentials are not configured in the workspace; runtime database operations require be/.env."
+test_results:
+  B01:
+    command: "cd be && npm run build && npm test"
+    passed: 2
+    failed: 0
+    skipped: 0
+    failures: []
+  B01-FE:
+    command: "cd fe && npm run build && npm test"
+    passed: 1
+    failed: 0
+    skipped: 0
+    failures: []
+endpoint_probes:
+  - method: GET
+    path: /health
+    status: 200
+    result: PASS
+  - method: GET
+    path: /api/health
+    status: 200
+    result: PASS

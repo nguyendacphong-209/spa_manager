@@ -1,0 +1,10 @@
+:root {
+  font-family: "Avenir Next", "Noto Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #302f2d;
+  background: #f1f0ed;
+  font-variant-numeric: tabular-nums;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+body { margin: 0; min-width: 320px; background: #f1f0ed; }
+h1, h2, h3 { color: #302f2d; letter-spacing: -0.02em; }
