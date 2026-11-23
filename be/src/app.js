@@ -95,9 +95,14 @@ export function createApp() {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean)
+  allowedOrigins.push('https://lemn-spa.vercel.app')
   app.use(cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        /^https:\/\/lemn-spa(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(origin)
+      ) {
         callback(null, true)
         return
       }
